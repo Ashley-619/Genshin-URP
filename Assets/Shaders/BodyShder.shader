@@ -1,5 +1,7 @@
 Shader "AshleyTA/GenshinBody" {
     Properties {
+        [Header(LightColor)]
+        [Toggle(_USE_LIGHTCOLOR)] _Use_LightColor ("UseLightColor", Float) = 1
 
         [Header(BaseColorMap)]
         [MainTexture]_BaseColorMap ("BaseColorMap", 2D) = "white" { }
@@ -100,6 +102,8 @@ Shader "AshleyTA/GenshinBody" {
             #pragma multi_compile_fog
             #pragma multi_compile_fragment _ DEBUG_DISPLAY
 
+
+            #pragma shader_feature_local_fragment _USE_LIGHTCOLOR
             #pragma shader_feature_local_fragment _DOUBLE_SIDED
             #pragma shader_feature_local_fragment _EMISSION
             #pragma shader_feature_local_fragment _NORMAL_MAP
@@ -348,13 +352,14 @@ Shader "AshleyTA/GenshinBody" {
                 #if _IS_PROCESSLIGHTMAP
                 
                     //针对霄宫lightmap的特殊优化，应该只有头发需要开启，非常奇怪的问题，lightmap似乎画坏了
-                    if (lightMap.g < _ProcessLightMapMaxValue) {
-                        if (lightMap.g > _ProcessLightMapMinValue) {
+                    if (lightMap.g < _ProcessLightMapMaxValue) 
+                    {
+                        if (lightMap.g > _ProcessLightMapMinValue) 
+                        {
                             lightMap.g = (_ProcessLightMapMaxValue+_ProcessLightMapMinValue)*0.5;
                         }
                     }
                 #endif
-                lightMap.g = lightMap.g;
                 //腮红,正片叠底
                 #if _IS_FACE
                     baseColor = (1.0 - baseColorRGBA.a * _RougeIntensity) * baseColor + _RougeIntensity * _RougeColor.rgb * baseColorRGBA.a;
@@ -383,7 +388,13 @@ Shader "AshleyTA/GenshinBody" {
                     rimColor = GetRimColor(input, baseColor);
                 #endif
 
-                half3 finalColor = baseColor * shadowColor + specularColor + rimColor;
+
+                #if _USE_LIGHTCOLOR 
+                    half3 finalColor = mainLight.color * (baseColor * shadowColor + specularColor + rimColor);
+                #else 
+                    half3 finalColor = baseColor * shadowColor + specularColor + rimColor;
+                #endif
+                
                 return half4(finalColor, 1);
             }
 
