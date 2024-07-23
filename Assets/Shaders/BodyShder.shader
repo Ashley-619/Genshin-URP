@@ -1,8 +1,5 @@
 Shader "AshleyTA/GenshinBody" {
     Properties {
-        [Header(LightColor)]
-        [Toggle(_USE_LIGHTCOLOR)] _Use_LightColor ("UseLightColor", Float) = 1
-
         [Header(BaseColorMap)]
         [MainTexture]_BaseColorMap ("BaseColorMap", 2D) = "white" { }
 
@@ -52,6 +49,10 @@ Shader "AshleyTA/GenshinBody" {
         [Toggle(_USE_OUTLINE)] _UseOutline ("UseOutLine", Float) = 0
         _OutlineColor ("OutLineColor", Color) = (0, 0, 0, 1)
         _OutlineWidth ("OutlineWidth", Float) = 0.000003
+
+        
+        [Header(LightColor)]
+        [Toggle(_USE_LIGHTCOLOR)] _Use_LightColor ("UseLightColor", Float) = 1
 
         [Header(others)]
         [ToggleUI] _IsDayTime ("Is Day Time", Float) = 1
@@ -389,10 +390,10 @@ Shader "AshleyTA/GenshinBody" {
                 #endif
 
 
+                half3 finalColor = baseColor * shadowColor + specularColor + rimColor;
+
                 #if _USE_LIGHTCOLOR 
-                    half3 finalColor = mainLight.color * (baseColor * shadowColor + specularColor + rimColor);
-                #else 
-                    half3 finalColor = baseColor * shadowColor + specularColor + rimColor;
+                    finalColor = mainLight.color * (baseColor * shadowColor + specularColor + rimColor);   
                 #endif
                 
                 return half4(finalColor, 1);

@@ -12,8 +12,8 @@ public class RotateManage : MonoBehaviour
     public GameObject AvatarObj = null;
     void Update()
     {
-        Quaternion rotationStep = Quaternion.Euler(0, rotationAvatarSpeed * Time.deltaTime, 0);
-        transform.localRotation = transform.localRotation * rotationStep;
+        Quaternion rotationStep = Quaternion.Euler(0, -rotationAvatarSpeed * Time.deltaTime, 0);
+        AvatarObj.transform.localRotation = AvatarObj.transform.localRotation * rotationStep;
 
 
     }

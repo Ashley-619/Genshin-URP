@@ -13,6 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _IS_PROCESSLIGHTMAP
+  - _USE_LIGHTCOLOR
   - _USE_OUTLINE
   - _USE_RIM
   m_InvalidKeywords: []
@@ -156,6 +157,7 @@ Material:
     - _UseOutline: 1
     - _UseRim: 1
     - _UseShadow: 1
+    - _Use_LightColor: 1
     - _Use_NormalMap: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
