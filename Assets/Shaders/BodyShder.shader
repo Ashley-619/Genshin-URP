@@ -50,6 +50,11 @@ Shader "AshleyTA/GenshinBody" {
         _OutlineColor ("OutLineColor", Color) = (0, 0, 0, 1)
         _OutlineWidth ("OutlineWidth", Float) = 0.000003
 
+        //自发光
+        [Header(Emission)]
+        [Toggle(_USE_EMISSION)] _UseEmission ("UseEmission", Float) = 0
+        _EmissionIntensity ("EmissionIntensity", Float) = 0
+
         
         [Header(LightColor)]
         [Toggle(_USE_LIGHTCOLOR)] _Use_LightColor ("UseLightColor", Float) = 1
@@ -82,41 +87,41 @@ Shader "AshleyTA/GenshinBody" {
             // Universal Pipeline keywords
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ EVALUATE_SH_MIXED EVALUATE_SH_VERTEX
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3
-            #pragma multi_compile_fragment _ _LIGHT_LAYERS
             #pragma multi_compile_fragment _ _LIGHT_COOKIES
+            #pragma multi_compile _ _LIGHT_LAYERS
             #pragma multi_compile _ _FORWARD_PLUS
-            #pragma multi_compile_fragment _ _WRITE_RENDERING_LAYERS
 
+
+            // -------------------------------------
             // Unity defined keywords
             #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING
             #pragma multi_compile _ SHADOWS_SHADOWMASK
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile _ LIGHTMAP_ON
             #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_fragment _ LOD_FADE_CROSSFADE
+            #pragma multi_compile _ USE_LEGACY_LIGHTMAPS
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #pragma multi_compile_fragment _ DEBUG_DISPLAY
 
-
+            //变体
             #pragma shader_feature_local_fragment _USE_LIGHTCOLOR
             #pragma shader_feature_local_fragment _DOUBLE_SIDED
-            #pragma shader_feature_local_fragment _EMISSION
-            #pragma shader_feature_local_fragment _NORMAL_MAP
             #pragma shader_feature_local_fragment _IS_FACE
             #pragma shader_feature_local_fragment _SPECULAR
             #pragma shader_feature_local_fragment _RIM
             #pragma shader_feature_local_fragment _USE_NORMALMAP
             #pragma shader_feature_local_fragment _IS_PROCESSLIGHTMAP
-
             #pragma shader_feature_local_fragment _IS_HAIR
-            #pragma shader_feature_local_fragment _USE_SHADOW
             #pragma shader_feature_local_fragment _USE_RIM
+            #pragma shader_feature_local_fragment _USE_EMISSION
             
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -179,6 +184,9 @@ Shader "AshleyTA/GenshinBody" {
             float _RimThreshold;
             half4 _RimColor;
             float _RimIntensity;
+
+            //自发光,神之眼
+            float _EmissionIntensity;
 
             struct Attributes {
                 float4 positionOS : POSITION;
@@ -389,11 +397,20 @@ Shader "AshleyTA/GenshinBody" {
                     rimColor = GetRimColor(input, baseColor);
                 #endif
 
+                //自发光
+                half3 emission = 0.0;
+                #if _USE_EMISSION
+                    //自发光
+                    half isEmissionArea = step(0.5, baseColorRGBA.a);
+                    half sinValue = (_SinTime.a  + 1.0) * 0.5;
+                    emission = baseColor * _EmissionIntensity * sinValue * isEmissionArea;
+                #endif
 
-                half3 finalColor = baseColor * shadowColor + specularColor + rimColor;
+
+                half3 finalColor = baseColor * shadowColor + specularColor + rimColor + emission;
 
                 #if _USE_LIGHTCOLOR 
-                    finalColor = mainLight.color * (baseColor * shadowColor + specularColor + rimColor);   
+                    finalColor = mainLight.color * (baseColor * shadowColor + specularColor + rimColor + emission);   
                 #endif
                 
                 return half4(finalColor, 1);
