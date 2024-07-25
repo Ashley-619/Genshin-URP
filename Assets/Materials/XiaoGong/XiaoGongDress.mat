@@ -122,6 +122,7 @@ Material:
     - _DoubleSided: 0
     - _DstBlend: 0
     - _DstBlendAlpha: 0
+    - _EmissionIntensity: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -153,6 +154,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _UseEmission: 0
     - _UseOutline: 1
     - _UseRim: 1
     - _UseShadow: 1
