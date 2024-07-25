@@ -1,4 +1,4 @@
-Shader "AshleyTA/GenshinBody" {
+Shader "TA/GenshinV1.0" {
     Properties {
         [Header(BaseColorMap)]
         [MainTexture]_BaseColorMap ("BaseColorMap", 2D) = "white" { }
@@ -220,9 +220,7 @@ Shader "AshleyTA/GenshinBody" {
                 output.backUV = TRANSFORM_TEX(input.backUV, _BaseColorMap);
                 output.color = input.color;
 
-                //这是什么？
-                output.positionCS = vertexInput.positionCS;//裁剪空间为什么和
-
+                output.positionCS = vertexInput.positionCS;
                 output.positionWS = vertexInput.positionWS;
                 output.positionNDC = vertexInput.positionNDC;
                 output.positionVS = vertexInput.positionVS;
@@ -243,7 +241,7 @@ Shader "AshleyTA/GenshinBody" {
             }
 
             half3 GetShadowColor(half shadow, half material, half isDayTime) {
-                //没有就是4（我比较怀疑这个逻辑的正确性，先这样吧）
+                //没有就是4
                 int index = 4;
                 index = lerp(index, 1, step(0.2, material));
                 index = lerp(index, 2, step(0.4, material));
@@ -261,7 +259,7 @@ Shader "AshleyTA/GenshinBody" {
                 //return half3(rampU,rampU,rampU);
 
                 half3 shadowColor = shadowRamp * lerp(_ShadowColor, 1.0, smoothstep(0.9, 1.0, rampUV.x));
-                shadowColor = lerp(shadowColor, 1.0, step(rangeMax, shadow));
+                shadowColor = lerp(shadowColor, half3(1.0,1.0,1.0), step(rangeMax, shadow));
 
                 return shadowColor;
             }
@@ -301,9 +299,6 @@ Shader "AshleyTA/GenshinBody" {
                 }
                 half faceShadowMap = SAMPLE_TEXTURE2D(_FaceLightMap, sampler_FaceLightMap, shadowUV).r;
                 int faceShadow = step(-0.5 * FDotL + 0.5, faceShadowMap);
-
-                //half faceMask = SAMPLE_TEXTURE2D(_FaceShadow, sampler_FaceShadow, input.uv).a;
-                //half maskedFaceShadow = lerp(faceShadow, 1.0, faceMask);
 
                 return faceShadow;
             }
@@ -380,7 +375,6 @@ Shader "AshleyTA/GenshinBody" {
                 #else
                     half aoFactor = lightMap.g * input.color.r;
                     half shadowValue = GetShadowValue(input, lightDirection, aoFactor);
-                    //return half4(shadowValue,shadowValue,shadowValue,1);
                     half3 shadowColor = GetShadowColor(shadowValue, lightMap.a, _IsDayTime);
                 #endif
                 //高光
@@ -440,7 +434,7 @@ Shader "AshleyTA/GenshinBody" {
 
             ENDHLSL
         }
-
+        //
         Pass {
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormals" }
