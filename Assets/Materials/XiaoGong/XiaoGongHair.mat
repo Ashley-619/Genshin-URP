@@ -16,6 +16,7 @@ Material:
   - _USE_LIGHTCOLOR
   - _USE_OUTLINE
   - _USE_RIM
+  - _USE_SPECULAR
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -23,7 +24,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties: _BaseColorMap
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -123,6 +124,7 @@ Material:
     - _DoubleSided: 0
     - _DstBlend: 0
     - _DstBlendAlpha: 0
+    - _EmissionIntensity: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -133,15 +135,16 @@ Material:
     - _Is_ProcessLightMap: 1
     - _Metallic: 0
     - _MetallicIntensity: 1
+    - _NonMetallicIntensity: 0.3
     - _OcclusionStrength: 1
-    - _OutlineWidth: 0.00003
+    - _OutlineWidth: 0.00004
     - _Parallax: 0.005
     - _ProcessLightMapMaxValue: 0.6
     - _ProcessLightMapMinValue: 0.4
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _RimIntensity: 0.6
-    - _RimOffSet: 6
+    - _RimOffSet: 0.2
     - _RimThreshold: 0.1
     - _RougeIntensity: 0
     - _ShadowOffset: 0.1
@@ -154,9 +157,11 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _UseEmission: 0
     - _UseOutline: 1
     - _UseRim: 1
     - _UseShadow: 1
+    - _UseSpecular: 1
     - _Use_LightColor: 1
     - _Use_NormalMap: 0
     - _WorkflowMode: 1

@@ -6,6 +6,7 @@ Shader "TA/GenshinV1.0" {
         [Header(NormalMap)]
         [Toggle(_USE_NORMALMAP)] _Use_NormalMap ("UseNormalMap", Float) = 1
         [Normal] _NormalMap ("Normal Map", 2D) = "bump" { }
+
         [Header(LightMap)]
         _LightMap ("Light Map", 2D) = "white" { }
 
@@ -14,18 +15,16 @@ Shader "TA/GenshinV1.0" {
         _ProcessLightMapMaxValue("ProcessLightMapMaxValue", Float) = 0
 
         [Header(ShadowRamp)]
-        
         _ShadowRamp ("ShadowRamp", 2D) = "white" { }
         _ShadowOffset ("Shadow Offset", Float) = 0.1
         _ShadowSmoothness ("Shadow Smoothness", Float) = 0.3
-        [HDR] _ShadowColor ("Shadow Color", Color) = (1, 1, 1, 1)
-        [ToggleUI] _UseShadow ("UseShadow", Float) = 1
 
         [Header(Specular)]
-        [ToggleUI] _ShowSpecular ("ShowSpecular", Float) = 1
+        [Toggle(_USE_SPECULAR)] _UseSpecular ("UseSpecular", Float) = 1
         _MetalMap ("Metal Map", 2D) = "white" { }
         _SpecularSmoothness ("SpecularSmoothness", Float) = 0.5
-        _MetallicIntensity ("MetallicIntensity", Float) = 0.5
+        _MetallicIntensity ("MetallicIntensity", Float) = 1
+        _NonMetallicIntensity ("NonMetallicIntensity", Float) = 0.3
 
         [Header(Face)]
         [Toggle(_IS_FACE)] _IsFace ("Is Face", Float) = 0
@@ -39,7 +38,7 @@ Shader "TA/GenshinV1.0" {
         //边缘光效果
         [Header(Rim)]
         [Toggle(_USE_RIM)] _UseRim ("UseRim", Float) = 0
-        _RimOffSet ("RimOffSet", Float) = 4
+        _RimOffSet ("RimOffSet", Float) = 0.3
         _RimThreshold ("RimThreshold", Float) = 0.1
         _RimColor ("RimColor", Color) = (1, 1, 1, 1)
         _RimIntensity ("RimIntensity", Float) = 0.6
@@ -61,13 +60,13 @@ Shader "TA/GenshinV1.0" {
 
         [Header(others)]
         [ToggleUI] _IsDayTime ("Is Day Time", Float) = 1
+        //渲染双面材质的一些设置
         [Toggle(_DOUBLE_SIDED)] _DoubleSided ("Double Sided", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src Blend", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Float) = 0
     }
     SubShader {
-        //Blend One Zero
         Tags { "RenderType" = "Opaque"
             "RenderPipeline" = "UniversalPipeline"
             "UniversalMaterialType" = "Lit" "IgnoreProjector" = "True"
@@ -115,8 +114,7 @@ Shader "TA/GenshinV1.0" {
             #pragma shader_feature_local_fragment _USE_LIGHTCOLOR
             #pragma shader_feature_local_fragment _DOUBLE_SIDED
             #pragma shader_feature_local_fragment _IS_FACE
-            #pragma shader_feature_local_fragment _SPECULAR
-            #pragma shader_feature_local_fragment _RIM
+            #pragma shader_feature_local_fragment _USE_SPECULAR
             #pragma shader_feature_local_fragment _USE_NORMALMAP
             #pragma shader_feature_local_fragment _IS_PROCESSLIGHTMAP
             #pragma shader_feature_local_fragment _IS_HAIR
@@ -162,12 +160,9 @@ Shader "TA/GenshinV1.0" {
 
             half _ShadowOffset;
             half _ShadowSmoothness;
-            half4 _ShadowColor;
-            float _UseShadow;
 
 
             float _IsDayTime;
-            float _UseShader;
 
             //双面渲染相关的
             half _Cull;
@@ -178,6 +173,7 @@ Shader "TA/GenshinV1.0" {
             float _ShowSpecular;
             float _SpecularSmoothness;
             float _MetallicIntensity;
+            float _NonMetallicIntensity;
 
             //边缘光
             float _RimOffSet;
@@ -236,12 +232,11 @@ Shader "TA/GenshinV1.0" {
                 half halfLambert = 0.5 * NDotL + 0.5;
                 //半兰伯特
                 half shadow = saturate(2.0 * halfLambert * aoFactor);
-                //大于0.9时，一定不是阴影
-                return lerp(shadow, 1.0, step(0.9, aoFactor));
+                return shadow;
             }
 
             half3 GetShadowColor(half shadow, half material, half isDayTime) {
-                //没有就是4
+                //全黑取第4列
                 int index = 4;
                 index = lerp(index, 1, step(0.2, material));
                 index = lerp(index, 2, step(0.4, material));
@@ -256,10 +251,8 @@ Shader "TA/GenshinV1.0" {
                 half rampV = saturate(0.5 * isDayTime + index / 10.0 + 0.05);
                 half2 rampUV = half2(rampU, rampV);
                 half3 shadowRamp = SAMPLE_TEXTURE2D(_ShadowRamp, sampler_ShadowRamp, rampUV);
-                //return half3(rampU,rampU,rampU);
 
-                half3 shadowColor = shadowRamp * lerp(_ShadowColor, 1.0, smoothstep(0.9, 1.0, rampUV.x));
-                shadowColor = lerp(shadowColor, half3(1.0,1.0,1.0), step(rangeMax, shadow));
+                half3 shadowColor = lerp(shadowRamp, half3(1.0,1.0,1.0), step(rangeMax, shadow));
 
                 return shadowColor;
             }
@@ -271,21 +264,23 @@ Shader "TA/GenshinV1.0" {
                 half3 V = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 half3 H = SafeNormalize(lightDirection + V);
                 half NDotH = dot(input.normalWS, H);
-                half blinnPhong = pow(saturate(NDotH), _SpecularSmoothness);
+                half blinn = pow(saturate(NDotH), _SpecularSmoothness);
                 
                 //matcap
                 half3 normalVS = TransformWorldToViewNormal(input.normalWS, true);
                 half2 matcapUV = 0.5 * normalVS.xy + 0.5;
                 half3 metalMap = SAMPLE_TEXTURE2D(_MetalMap, sampler_MetalMap, matcapUV);
 
-                half3 metallic = blinnPhong * lightMap.b * baseColor * metalMap * _MetallicIntensity;
-                half3 specular = lerp(half3(0, 0, 0), metallic, step(0.5, lightMap.r));
+                half3 metallic = lerp(half3(0,0,0),blinn * lightMap.b * baseColor * metalMap * _MetallicIntensity * lightMap.r,step(0.9, lightMap.r));
+                half3 nonMetallic = lerp(blinn * lightMap.b * baseColor  * _NonMetallicIntensity *lightMap.r,half3(0,0,0),step(0.9, lightMap.r));
+                half3 specular = metallic+nonMetallic;
+
                 return specular;
             }
 
             //脸部阴影（硬）
             int GetFaceShadowValue(Varyings input, half3 lightDirection) {
-                //原神角色通过建模软件导出后，结果变成了 y forward， -x up， -z right。
+                //角色通过建模软件导出后，结果变成了 y forward， -x up， -z right。
                 half3 Front = TransformObjectToWorldDir(half3(0, 1, 0));
                 half3 Right = TransformObjectToWorldDir(half3(0, 0, -1));
 
@@ -303,25 +298,39 @@ Shader "TA/GenshinV1.0" {
                 return faceShadow;
             }
 
-            //齐次裁剪转视口
+            //齐次裁剪转视口（unity中的NDC和《入门精要》的NDC有一点差异），这里参考下面GetVertexPositionInputs的实现
             float4 TransformHClipToViewPortPos(float4 positionCS) {
                 float4 o = positionCS * 0.5f;
-                o.xy = float2(o.x, o.y * _ProjectionParams.x) + o.w;
+                o.xy = float2(o.x, o.y * _ProjectionParams.x) + o.w;//_ProjectionParams.x用于处理DX11和OpenGL的Y分量相反的情况，其实就是没除w
                 o.zw = positionCS.zw;
                 return o / o.w;
             }
 
+            //VertexPositionInputs GetVertexPositionInputs(float3 positionOS) {
+            //    VertexPositionInputs input;
+            //    input.positionWS = TransformObjectToWorld(positionOS);
+            //    input.positionVS = TransformWorldToView(input.positionWS);
+            //    input.positionCS = TransformWorldToHClip(input.positionWS);
+
+            //    float4 ndc = input.positionCS * 0.5f;
+            //    input.positionNDC.xy = float2(ndc.x, ndc.y * _ProjectionParams.x) + ndc.w;
+            //    input.positionNDC.zw = input.positionCS.zw;
+
+            //    return input;
+            //}
+
             half3 GetRimColor(Varyings input, half3 baseColor) {
                 half3 normalVS = TransformWorldToViewNormal(input.normalWS, true);
-                half3 samplePositionVS = half3(input.positionVS.xy + normalVS.xy / _ScreenParams * _RimOffSet, input.positionVS.z);//这里为什么是在观察空间里移动，我没太明白
+                half3 samplePositionVS = half3(input.positionVS.xy + normalVS.xy * _RimOffSet*0.01, input.positionVS.z);
+                //0.01是一个缩放系数，方便调整，无实际意义；由于后面的变化没有用到关于Z的参数，理论上z没有影响。这里值得继续深究。
 
                 float4 samplePositionCS = TransformWViewToHClip(samplePositionVS);
-                float4 samplePositionVP = TransformHClipToViewPortPos(samplePositionCS);
+                float4 samplePositionNDC = TransformHClipToViewPortPos(samplePositionCS);
 
                 float depth = SampleSceneDepth(input.positionNDC.xy / input.positionNDC.w);
-                float linearEyeDepth = LinearEyeDepth(SampleSceneDepth(input.positionNDC.xy / input.positionNDC.w), _ZBufferParams);
+                float linearEyeDepth = LinearEyeDepth(depth, _ZBufferParams);
 
-                float offsetDepth = SampleSceneDepth(samplePositionVP);
+                float offsetDepth = SampleSceneDepth(samplePositionNDC / samplePositionNDC.w);
                 float linearEyeOffsetDepth = LinearEyeDepth(offsetDepth, _ZBufferParams);
 
                 float depthDiff = linearEyeOffsetDepth - linearEyeDepth;
@@ -380,9 +389,9 @@ Shader "TA/GenshinV1.0" {
                 //高光
                 half3 specularColor = half3(0, 0, 0);
                 #if !_IS_FACE
-                    if (_ShowSpecular > 0.5) {
+                    #if _USE_SPECULAR
                         specularColor = GetSpecularColor(input, lightDirection, lightMap.rgb, baseColor);
-                    }
+                    #endif
                 #endif
 
                 //边缘光
@@ -434,7 +443,7 @@ Shader "TA/GenshinV1.0" {
 
             ENDHLSL
         }
-        //
+
         Pass {
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormals" }
@@ -509,8 +518,8 @@ Shader "TA/GenshinV1.0" {
 
                 Varyings output = (Varyings)0;
                 float3 offset = input.normalOS * _OutlineWidth * input.color.a;
-                float4 pos0 = float4(input.positionOS.xyz + offset, 1.0);
-                output.positionCS = TransformObjectToHClip(pos0);
+                float4 posOSOffset = float4(input.positionOS.xyz + offset, input.positionOS.w);
+                output.positionCS = TransformObjectToHClip(posOSOffset);
                 output.uv = input.uv;
                 return output;
             }
